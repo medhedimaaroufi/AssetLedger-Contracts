@@ -63,8 +63,8 @@ docker run -it --rm -v $(pwd):/project eosio-cdt-env
 Navigate to any module and compile using `eosio-cpp`:
 
 ```bash
-cd /project/governance/src
-eosio-cpp -I ../include -o governance.wasm governance.cpp
+cd /project/nft/src
+eosio-cpp -o nftcontract.wasm nft_contract.cpp -abigen
 ```
 
 Repeat for other contract modules like `nft`, `eosio.token`, etc.
