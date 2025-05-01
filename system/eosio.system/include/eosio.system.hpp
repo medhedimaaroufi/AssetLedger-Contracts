@@ -7,6 +7,7 @@
 #include <eosio/asset.hpp>
 #include <eosio/system.hpp>
 #include <eosio/time.hpp>
+#include <eosio/crypto.hpp>
 
 using namespace eosio;
 using namespace std; // For std::vector, std::sort
@@ -15,6 +16,14 @@ class [[eosio::contract("eosio.system")]] system_contract : public contract {
 public:
     using contract::contract;
 
+    // Struct for producer key
+    struct producer_key {
+        name producer_name;
+        public_key block_signing_key;
+
+        EOSLIB_SERIALIZE(producer_key, (producer_name)(block_signing_key))
+    };
+
     // Actions
     [[eosio::action]] void init(uint64_t version, symbol core);
     [[eosio::action]] void regproducer(name producer, public_key producer_key);
@@ -22,9 +31,9 @@ public:
     [[eosio::action]] void listprods();
     [[eosio::action]] void claimrewards(name producer);
     [[eosio::action]] void delegatebw(name from, name receiver, asset stake_net_quantity, asset stake_cpu_quantity);
-    [[eosio::action]] void regnode(name node, string node_type); // Register API, Seed, Full, Validator nodes
-    [[eosio::action]] void reportactive(name node, uint64_t uptime_hours); // Report uptime for active node rewards
-    [[eosio::action]] void distrnodes(); // Distribute node rewards daily
+    [[eosio::action]] void regnode(name node, string node_type);
+    [[eosio::action]] void reportactive(name node, uint64_t uptime_hours);
+    [[eosio::action]] void distrnodes();
     [[eosio::on_notify("eosio::onblock")]] void onblock(block_timestamp timestamp, name producer);
 
 private:

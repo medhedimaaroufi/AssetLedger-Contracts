@@ -97,13 +97,13 @@ void system_contract::voteproducer(name voter, vector<name> producers) {
         v.last_vote_time = now;
     });
 
-    // Notify nodegovernance to track Validator voting participation
+    // Notify nodegov to track Validator voting participation
     node_table nodes(get_self(), get_self().value);
     auto node_itr = nodes.find(voter.value);
     if (node_itr != nodes.end() && node_itr->node_type == "Validator") {
         action(
             permission_level{get_self(), "active"_n},
-            "nodegovernance"_n,
+            "nodegov"_n, // Changed from "nodegovernance"
             "checkvoting"_n,
             std::make_tuple(voter, now)
         ).send();
@@ -267,13 +267,6 @@ void system_contract::onblock(block_timestamp timestamp, name producer) {
 }
 
 void system_contract::schedule_producers() {
-    struct producer_key {
-        name producer_name;
-        public_key block_signing_key;
-
-        EOSLIB_SERIALIZE(producer_key, (producer_name)(block_signing_key))
-    };
-
     global_table global(get_self(), get_self().value);
     auto g = global.begin();
     check(g != global.end(), "Global state not initialized");
@@ -425,7 +418,7 @@ void system_contract::distribute_initial_rewards() {
 
     if (active_nodes.empty()) return;
 
-    // Distribute 1200 AXT equally among all active nodes
+    // Distribute initial phase rewards equally among all active nodes
     asset total_initial_rewards = g->initial_phase_rewards;
     asset reward_per_node = asset(total_initial_rewards.amount / active_nodes.size(), symbol("AXT", 4));
     for (const auto& node : active_nodes) {
