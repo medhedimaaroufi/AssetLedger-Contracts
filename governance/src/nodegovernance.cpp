@@ -1,5 +1,5 @@
 // nodegovernance.cpp
-// Version: 1.2 (Updated for AssetLedger whitepaper requirements, May 2025)
+// Version: 1.1 (Updated for AssetLedger whitepaper requirements, May 2025)
 
 #include "nodegovernance.hpp"
 
