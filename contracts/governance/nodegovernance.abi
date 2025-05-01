@@ -4,28 +4,6 @@
     "types": [],
     "structs": [
         {
-            "name": "activity_entry",
-            "base": "",
-            "fields": [
-                {
-                    "name": "user",
-                    "type": "name"
-                },
-                {
-                    "name": "node_type",
-                    "type": "string"
-                },
-                {
-                    "name": "hours",
-                    "type": "uint64"
-                },
-                {
-                    "name": "day_index",
-                    "type": "uint64"
-                }
-            ]
-        },
-        {
             "name": "canbeprod",
             "base": "",
             "fields": [
@@ -70,11 +48,6 @@
             ]
         },
         {
-            "name": "distribute",
-            "base": "",
-            "fields": []
-        },
-        {
             "name": "node_entry",
             "base": "",
             "fields": [
@@ -93,42 +66,6 @@
                 {
                     "name": "voting_sessions",
                     "type": "uint64"
-                }
-            ]
-        },
-        {
-            "name": "reportactiv",
-            "base": "",
-            "fields": [
-                {
-                    "name": "user",
-                    "type": "name"
-                },
-                {
-                    "name": "node_type",
-                    "type": "string"
-                },
-                {
-                    "name": "hours",
-                    "type": "uint64"
-                },
-                {
-                    "name": "day_index",
-                    "type": "uint64"
-                }
-            ]
-        },
-        {
-            "name": "reward_entry",
-            "base": "",
-            "fields": [
-                {
-                    "name": "user",
-                    "type": "name"
-                },
-                {
-                    "name": "pending_reward",
-                    "type": "asset"
                 }
             ]
         },
@@ -209,16 +146,6 @@
             "ricardian_contract": ""
         },
         {
-            "name": "distribute",
-            "type": "distribute",
-            "ricardian_contract": ""
-        },
-        {
-            "name": "reportactiv",
-            "type": "reportactiv",
-            "ricardian_contract": ""
-        },
-        {
             "name": "sponsor",
             "type": "sponsor",
             "ricardian_contract": ""
@@ -226,22 +153,8 @@
     ],
     "tables": [
         {
-            "name": "activity",
-            "type": "activity_entry",
-            "index_type": "i64",
-            "key_names": [],
-            "key_types": []
-        },
-        {
             "name": "nodes",
             "type": "node_entry",
-            "index_type": "i64",
-            "key_names": [],
-            "key_types": []
-        },
-        {
-            "name": "rewards",
-            "type": "reward_entry",
             "index_type": "i64",
             "key_names": [],
             "key_types": []
@@ -264,14 +177,5 @@
     "kv_tables": {},
     "ricardian_clauses": [],
     "variants": [],
-    "action_results": [
-        {
-            "name": "canbeprod",
-            "result_type": "bool"
-        },
-        {
-            "name": "canbevalid",
-            "result_type": "bool"
-        }
-    ]
+    "action_results": []
 }

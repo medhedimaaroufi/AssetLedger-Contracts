@@ -1,7 +1,7 @@
 // nftcontract.cpp
 // Version: 1.1 (Updated for AssetLedger whitepaper requirements, May 2025)
 
-#include "nftcontract.hpp"
+#include "../include/nft_contract.hpp"
 
 void nftcontract::createcol(name issuer, uint64_t collection_id, std::string description) {
     // Require authorization from the issuer

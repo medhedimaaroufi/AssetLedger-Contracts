@@ -66,8 +66,10 @@ private:
         asset reward;
 
         uint64_t primary_key() const { return sponsor.value ^ new_account.value; }
+        uint64_t by_account() const { return new_account.value; } // Secondary index for new_account
 
         EOSLIB_SERIALIZE(sponsor_entry, (sponsor)(new_account)(resource_cost)(reward))
     };
-    using sponsor_table = multi_index<"sponsors"_n, sponsor_entry>;
+    using sponsor_table = multi_index<"sponsors"_n, sponsor_entry,
+        indexed_by<"byaccount"_n, const_mem_fun<sponsor_entry, uint64_t, &sponsor_entry::by_account>>>;
 };

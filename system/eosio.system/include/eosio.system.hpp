@@ -7,9 +7,17 @@
 #include <eosio/asset.hpp>
 #include <eosio/system.hpp>
 #include <eosio/time.hpp>
+#include <eosio/crypto.hpp>
 
 using namespace eosio;
 using namespace std; // For std::vector, std::sort
+
+struct producer_key {
+    name producer_name;
+    public_key block_signing_key;
+
+    EOSLIB_SERIALIZE(producer_key, (producer_name)(block_signing_key))
+};
 
 class [[eosio::contract("eosio.system")]] system_contract : public contract {
 public:

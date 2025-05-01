@@ -46,9 +46,17 @@ void nodegovernance::claimrewards(name user) {
     require_auth(user);
 
     sponsor_table sponsors(get_self(), get_self().value);
-    auto idx = sponsors.get_index<"byaccount"_n>(); // Note: Requires a secondary index
-    auto itr = idx.find(user.value);
-    if (itr == idx.end() || itr->reward.amount == 0) {
+    auto idx = sponsors.get_index<"byaccount"_n>();
+    asset total_reward = asset(0, symbol("AXT", 4));
+
+    // Find all sponsorships where user is the new_account
+    auto itr = idx.lower_bound(user.value);
+    while (itr != idx.end() && itr->new_account == user) {
+        total_reward += itr->reward;
+        itr = idx.erase(itr);
+    }
+
+    if (total_reward.amount == 0) {
         print("No sponsorship rewards to claim for ", user, "\n");
         return;
     }
@@ -57,10 +65,8 @@ void nodegovernance::claimrewards(name user) {
         permission_level{get_self(), "active"_n},
         "eosio.token"_n,
         "issue"_n,
-        std::make_tuple(user, itr->reward, std::string("Sponsorship reward"))
+        std::make_tuple(user, total_reward, std::string("Sponsorship reward"))
     ).send();
-
-    sponsors.erase(itr);
 
     // Notify the user
     require_recipient(user);

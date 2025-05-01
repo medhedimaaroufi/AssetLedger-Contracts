@@ -48,8 +48,20 @@
                     "type": "symbol"
                 },
                 {
+                    "name": "chain_start_time",
+                    "type": "uint64"
+                },
+                {
+                    "name": "initial_phase",
+                    "type": "bool"
+                },
+                {
                     "name": "last_schedule_update",
                     "type": "uint64"
+                },
+                {
+                    "name": "initial_phase_rewards",
+                    "type": "asset"
                 }
             ]
         },
@@ -71,6 +83,32 @@
             "name": "listprods",
             "base": "",
             "fields": []
+        },
+        {
+            "name": "node_info",
+            "base": "",
+            "fields": [
+                {
+                    "name": "node",
+                    "type": "name"
+                },
+                {
+                    "name": "node_type",
+                    "type": "string"
+                },
+                {
+                    "name": "uptime_hours",
+                    "type": "uint64"
+                },
+                {
+                    "name": "pending_node_rewards",
+                    "type": "asset"
+                },
+                {
+                    "name": "is_active",
+                    "type": "bool"
+                }
+            ]
         },
         {
             "name": "producer_info",
@@ -103,6 +141,20 @@
             ]
         },
         {
+            "name": "regnode",
+            "base": "",
+            "fields": [
+                {
+                    "name": "node",
+                    "type": "name"
+                },
+                {
+                    "name": "node_type",
+                    "type": "string"
+                }
+            ]
+        },
+        {
             "name": "regproducer",
             "base": "",
             "fields": [
@@ -113,6 +165,20 @@
                 {
                     "name": "producer_key",
                     "type": "public_key"
+                }
+            ]
+        },
+        {
+            "name": "reportactive",
+            "base": "",
+            "fields": [
+                {
+                    "name": "node",
+                    "type": "name"
+                },
+                {
+                    "name": "uptime_hours",
+                    "type": "uint64"
                 }
             ]
         },
@@ -179,8 +245,18 @@
             "ricardian_contract": ""
         },
         {
+            "name": "regnode",
+            "type": "regnode",
+            "ricardian_contract": ""
+        },
+        {
             "name": "regproducer",
             "type": "regproducer",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "reportactive",
+            "type": "reportactive",
             "ricardian_contract": ""
         },
         {
@@ -193,6 +269,13 @@
         {
             "name": "global",
             "type": "global_state",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "nodes",
+            "type": "node_info",
             "index_type": "i64",
             "key_names": [],
             "key_types": []
