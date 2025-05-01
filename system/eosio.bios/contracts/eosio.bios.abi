@@ -1,0 +1,84 @@
+{
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT ",
+    "version": "eosio::abi/1.2",
+    "types": [],
+    "structs": [
+        {
+            "name": "producer_entry",
+            "base": "",
+            "fields": [
+                {
+                    "name": "producer_name",
+                    "type": "name"
+                },
+                {
+                    "name": "block_signing_key",
+                    "type": "public_key"
+                }
+            ]
+        },
+        {
+            "name": "producer_key",
+            "base": "",
+            "fields": [
+                {
+                    "name": "producer_name",
+                    "type": "name"
+                },
+                {
+                    "name": "block_signing_key",
+                    "type": "public_key"
+                }
+            ]
+        },
+        {
+            "name": "setpriv",
+            "base": "",
+            "fields": [
+                {
+                    "name": "account",
+                    "type": "name"
+                },
+                {
+                    "name": "is_priv",
+                    "type": "uint8"
+                }
+            ]
+        },
+        {
+            "name": "setprods",
+            "base": "",
+            "fields": [
+                {
+                    "name": "schedule",
+                    "type": "producer_key[]"
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "name": "setpriv",
+            "type": "setpriv",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "setprods",
+            "type": "setprods",
+            "ricardian_contract": ""
+        }
+    ],
+    "tables": [
+        {
+            "name": "producers",
+            "type": "producer_entry",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        }
+    ],
+    "kv_tables": {},
+    "ricardian_clauses": [],
+    "variants": [],
+    "action_results": []
+}

@@ -1,0 +1,219 @@
+{
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT ",
+    "version": "eosio::abi/1.2",
+    "types": [],
+    "structs": [
+        {
+            "name": "claimrewards",
+            "base": "",
+            "fields": [
+                {
+                    "name": "producer",
+                    "type": "name"
+                }
+            ]
+        },
+        {
+            "name": "delegatebw",
+            "base": "",
+            "fields": [
+                {
+                    "name": "from",
+                    "type": "name"
+                },
+                {
+                    "name": "receiver",
+                    "type": "name"
+                },
+                {
+                    "name": "stake_net_quantity",
+                    "type": "asset"
+                },
+                {
+                    "name": "stake_cpu_quantity",
+                    "type": "asset"
+                }
+            ]
+        },
+        {
+            "name": "global_state",
+            "base": "",
+            "fields": [
+                {
+                    "name": "version",
+                    "type": "uint64"
+                },
+                {
+                    "name": "core_symbol",
+                    "type": "symbol"
+                },
+                {
+                    "name": "last_schedule_update",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "init",
+            "base": "",
+            "fields": [
+                {
+                    "name": "version",
+                    "type": "uint64"
+                },
+                {
+                    "name": "core",
+                    "type": "symbol"
+                }
+            ]
+        },
+        {
+            "name": "listprods",
+            "base": "",
+            "fields": []
+        },
+        {
+            "name": "producer_info",
+            "base": "",
+            "fields": [
+                {
+                    "name": "owner",
+                    "type": "name"
+                },
+                {
+                    "name": "total_votes",
+                    "type": "float64"
+                },
+                {
+                    "name": "producer_key",
+                    "type": "public_key"
+                },
+                {
+                    "name": "is_active",
+                    "type": "bool"
+                },
+                {
+                    "name": "last_reward_claim",
+                    "type": "uint64"
+                },
+                {
+                    "name": "pending_rewards",
+                    "type": "asset"
+                }
+            ]
+        },
+        {
+            "name": "regproducer",
+            "base": "",
+            "fields": [
+                {
+                    "name": "producer",
+                    "type": "name"
+                },
+                {
+                    "name": "producer_key",
+                    "type": "public_key"
+                }
+            ]
+        },
+        {
+            "name": "voteproducer",
+            "base": "",
+            "fields": [
+                {
+                    "name": "voter",
+                    "type": "name"
+                },
+                {
+                    "name": "producers",
+                    "type": "name[]"
+                }
+            ]
+        },
+        {
+            "name": "voter_info",
+            "base": "",
+            "fields": [
+                {
+                    "name": "owner",
+                    "type": "name"
+                },
+                {
+                    "name": "producers",
+                    "type": "name[]"
+                },
+                {
+                    "name": "staked",
+                    "type": "asset"
+                },
+                {
+                    "name": "last_vote_time",
+                    "type": "uint64"
+                },
+                {
+                    "name": "pending_voter_rewards",
+                    "type": "asset"
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "name": "claimrewards",
+            "type": "claimrewards",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "delegatebw",
+            "type": "delegatebw",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "init",
+            "type": "init",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "listprods",
+            "type": "listprods",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "regproducer",
+            "type": "regproducer",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "voteproducer",
+            "type": "voteproducer",
+            "ricardian_contract": ""
+        }
+    ],
+    "tables": [
+        {
+            "name": "global",
+            "type": "global_state",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "producers",
+            "type": "producer_info",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "voters",
+            "type": "voter_info",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        }
+    ],
+    "kv_tables": {},
+    "ricardian_clauses": [],
+    "variants": [],
+    "action_results": []
+}

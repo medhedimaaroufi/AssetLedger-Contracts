@@ -1,6 +1,6 @@
-#include "nft_contract.hpp"
+#include "../include/nft_contract.hpp"
 
-void nft_contract::createcoll(name issuer, uint64_t collection_id, std::string description) {
+void nft_contract::createcol(name issuer, uint64_t collection_id, std::string description) {
   // Require authorization from the issuer
   require_auth(issuer);
 
@@ -20,7 +20,7 @@ void nft_contract::createcoll(name issuer, uint64_t collection_id, std::string d
   });
 }
 
-void nft_contract::createasset(name issuer, uint64_t collection_id, uint64_t asset_id, std::string metadata) {
+void nft_contract::create(name issuer, uint64_t collection_id, uint64_t asset_id, std::string metadata) {
   // Require authorization from the issuer
   require_auth(issuer);
 
@@ -47,7 +47,7 @@ void nft_contract::createasset(name issuer, uint64_t collection_id, uint64_t ass
   });
 }
 
-void nft_contract::issueasset(name to, uint64_t collection_id, uint64_t asset_id, std::string memo) {
+void nft_contract::issue(name to, uint64_t collection_id, uint64_t asset_id, std::string memo) {
   // Check if the collection exists
   collection_table collections(get_self(), get_self().value);
   auto coll_itr = collections.find(collection_id);
@@ -72,7 +72,7 @@ void nft_contract::issueasset(name to, uint64_t collection_id, uint64_t asset_id
   });
 }
 
-void nft_contract::transferasset(name from, name to, uint64_t collection_id, uint64_t asset_id, std::string memo) {
+void nft_contract::transfer(name from, name to, uint64_t collection_id, uint64_t asset_id, std::string memo) {
   // Require authorization from the current owner
   require_auth(from);
 

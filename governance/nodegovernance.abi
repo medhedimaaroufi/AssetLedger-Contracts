@@ -1,0 +1,277 @@
+{
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT ",
+    "version": "eosio::abi/1.2",
+    "types": [],
+    "structs": [
+        {
+            "name": "activity_entry",
+            "base": "",
+            "fields": [
+                {
+                    "name": "user",
+                    "type": "name"
+                },
+                {
+                    "name": "node_type",
+                    "type": "string"
+                },
+                {
+                    "name": "hours",
+                    "type": "uint64"
+                },
+                {
+                    "name": "day_index",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "canbeprod",
+            "base": "",
+            "fields": [
+                {
+                    "name": "user",
+                    "type": "name"
+                }
+            ]
+        },
+        {
+            "name": "canbevalid",
+            "base": "",
+            "fields": [
+                {
+                    "name": "user",
+                    "type": "name"
+                }
+            ]
+        },
+        {
+            "name": "checkvoting",
+            "base": "",
+            "fields": [
+                {
+                    "name": "user",
+                    "type": "name"
+                },
+                {
+                    "name": "current_time",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "claimrewards",
+            "base": "",
+            "fields": [
+                {
+                    "name": "user",
+                    "type": "name"
+                }
+            ]
+        },
+        {
+            "name": "distribute",
+            "base": "",
+            "fields": []
+        },
+        {
+            "name": "node_entry",
+            "base": "",
+            "fields": [
+                {
+                    "name": "user",
+                    "type": "name"
+                },
+                {
+                    "name": "node_type",
+                    "type": "string"
+                },
+                {
+                    "name": "days_active",
+                    "type": "uint64"
+                },
+                {
+                    "name": "voting_sessions",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "reportactiv",
+            "base": "",
+            "fields": [
+                {
+                    "name": "user",
+                    "type": "name"
+                },
+                {
+                    "name": "node_type",
+                    "type": "string"
+                },
+                {
+                    "name": "hours",
+                    "type": "uint64"
+                },
+                {
+                    "name": "day_index",
+                    "type": "uint64"
+                }
+            ]
+        },
+        {
+            "name": "reward_entry",
+            "base": "",
+            "fields": [
+                {
+                    "name": "user",
+                    "type": "name"
+                },
+                {
+                    "name": "pending_reward",
+                    "type": "asset"
+                }
+            ]
+        },
+        {
+            "name": "sponsor",
+            "base": "",
+            "fields": [
+                {
+                    "name": "sponsor",
+                    "type": "name"
+                },
+                {
+                    "name": "new_account",
+                    "type": "name"
+                },
+                {
+                    "name": "resource_cost",
+                    "type": "asset"
+                }
+            ]
+        },
+        {
+            "name": "sponsor_entry",
+            "base": "",
+            "fields": [
+                {
+                    "name": "sponsor",
+                    "type": "name"
+                },
+                {
+                    "name": "new_account",
+                    "type": "name"
+                },
+                {
+                    "name": "resource_cost",
+                    "type": "asset"
+                },
+                {
+                    "name": "reward",
+                    "type": "asset"
+                }
+            ]
+        },
+        {
+            "name": "voting_entry",
+            "base": "",
+            "fields": [
+                {
+                    "name": "user",
+                    "type": "name"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "uint64"
+                }
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "name": "canbeprod",
+            "type": "canbeprod",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "canbevalid",
+            "type": "canbevalid",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "checkvoting",
+            "type": "checkvoting",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "claimrewards",
+            "type": "claimrewards",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "distribute",
+            "type": "distribute",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "reportactiv",
+            "type": "reportactiv",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "sponsor",
+            "type": "sponsor",
+            "ricardian_contract": ""
+        }
+    ],
+    "tables": [
+        {
+            "name": "activity",
+            "type": "activity_entry",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "nodes",
+            "type": "node_entry",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "rewards",
+            "type": "reward_entry",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "sponsors",
+            "type": "sponsor_entry",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "voting",
+            "type": "voting_entry",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        }
+    ],
+    "kv_tables": {},
+    "ricardian_clauses": [],
+    "variants": [],
+    "action_results": [
+        {
+            "name": "canbeprod",
+            "result_type": "bool"
+        },
+        {
+            "name": "canbevalid",
+            "result_type": "bool"
+        }
+    ]
+}

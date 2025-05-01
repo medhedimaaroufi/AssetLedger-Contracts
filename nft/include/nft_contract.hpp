@@ -9,19 +9,19 @@ public:
 
   // Action to create a new NFT
   [[eosio::action]]
-  void createasset(name issuer, uint64_t collection_id, uint64_t asset_id, std::string metadata);
+  void create(name issuer, uint64_t collection_id, uint64_t asset_id, std::string metadata);
 
   // Action to create a new collection
   [[eosio::action]]
-  void createcoll(name issuer, uint64_t collection_id, std::string description);
+  void createcol(name issuer, uint64_t collection_id, std::string description);
 
   // Action to issue an NFT to a user
   [[eosio::action]]
-  void issueasset(name to, uint64_t collection_id, uint64_t asset_id, std::string memo);
+  void issue(name to, uint64_t collection_id, uint64_t asset_id, std::string memo);
 
   // Action to transfer an NFT between users
   [[eosio::action]]
-  void transferasset(name from, name to, uint64_t collection_id, uint64_t asset_id, std::string memo);
+  void transfer(name from, name to, uint64_t collection_id, uint64_t asset_id, std::string memo);
 
 private:
   // Table to store NFT assets

@@ -64,7 +64,7 @@ Navigate to any module and compile using `eosio-cpp`:
 
 ```bash
 cd /project/nft/src
-eosio-cpp -o nftcontract.wasm nft_contract.cpp -abigen
+eosio-cpp -abigen -I ../include/ -R ../ricardian -o nftcontract.wasm ../src/nft_contract.cpp 
 ```
 
 Repeat for other contract modules like `nft`, `eosio.token`, etc.
