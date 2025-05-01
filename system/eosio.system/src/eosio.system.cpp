@@ -106,7 +106,7 @@ void system_contract::voteproducer(name voter, vector<name> producers) {
     if (node_itr != nodes.end() && node_itr->node_type == "Validator") {
         action(
             permission_level{get_self(), "active"_n},
-            "nodegovernance"_n,
+            "nodegovern"_n,
             "checkvoting"_n,
             std::make_tuple(voter, now)
         ).send();
@@ -223,10 +223,10 @@ void system_contract::reportactive(name node, uint64_t uptime_hours) {
         n.pending_node_rewards += reward;
     });
 
-    // Notify nodegovernance to track daily activity
+    // Notify nodegovern to track daily activity
     action(
         permission_level{get_self(), "active"_n},
-        "nodegovernance"_n,
+        "nodegovern"_n,
         "trackdaily"_n,
         std::make_tuple(node, uptime_hours)
     ).send();

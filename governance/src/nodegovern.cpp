@@ -1,4 +1,4 @@
-#include "nodegovernance.hpp"
+#include "../include/nodegovern.hpp"
 
 void nodegovernance::checkvoting(name user, uint64_t current_time) {
     require_auth("eosio.system"_n);
@@ -31,7 +31,8 @@ void nodegovernance::canbevalid(name user) {
 
     daily_table daily(get_self(), get_self().value);
     uint64_t active_days = 0;
-    for (auto d_itr = daily.begin(); d_itr != daily.end(); ++d_itr) {
+    auto idx = daily.get_index<"bydaily"_n>();
+    for (auto d_itr = idx.begin(); d_itr != idx.end(); ++d_itr) {
         if (d_itr->node == user && d_itr->hours_active >= 5) {
             active_days++;
         }
@@ -120,11 +121,14 @@ void nodegovernance::sponsor(name sponsor, name new_account, asset resource_cost
 void nodegovernance::trackdaily(name node, uint64_t uptime_hours) {
     require_auth("eosio.system"_n);
 
+    check(uptime_hours > 0, "Uptime hours must be positive");
+    check(is_account(node), "Node account does not exist: " + node.to_string());
+
     uint64_t now = current_time_point().sec_since_epoch();
     uint64_t today = now - (now % (24 * 3600)); // Floor to start of day
 
     daily_table daily(get_self(), get_self().value);
-    auto idx = daily.get_index<"dailyact"_n>();
+    auto idx = daily.get_index<"bydaily"_n>();
     auto itr = idx.find(node.value ^ today);
 
     if (itr == idx.end()) {
@@ -141,7 +145,9 @@ void nodegovernance::trackdaily(name node, uint64_t uptime_hours) {
 
     node_table nodes(get_self(), get_self().value);
     auto node_itr = nodes.find(node.value);
-    if (node_itr != nodes.end() && itr->hours_active >= 5) {
+    check(node_itr != nodes.end(), "Node not registered: " + node.to_string());
+
+    if (itr != idx.end() && itr->hours_active >= 5) {
         nodes.modify(node_itr, same_payer, [&](auto& row) {
             row.days_active += 1;
         });

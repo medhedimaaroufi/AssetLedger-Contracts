@@ -6,7 +6,7 @@
 
 using namespace eosio;
 
-class [[eosio::contract("nodegovernance")]] nodegovernance : public contract {
+class [[eosio::contract("nodegovern")]] nodegovernance : public contract {
 public:
     using contract::contract;
 
@@ -54,7 +54,9 @@ private:
         uint64_t date; // Seconds since epoch, floored to day
         uint64_t hours_active;
         uint64_t primary_key() const { return node.value ^ date; }
+        uint64_t by_daily() const { return node.value ^ date; } // Secondary index
         EOSLIB_SERIALIZE(daily_activity, (node)(date)(hours_active))
     };
-    using daily_table = multi_index<"dailyact"_n, daily_activity>;
+    using daily_table = multi_index<"dailyact"_n, daily_activity,
+        indexed_by<"bydaily"_n, const_mem_fun<daily_activity, uint64_t, &daily_activity::by_daily>>>;
 };

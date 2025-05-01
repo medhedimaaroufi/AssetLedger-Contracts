@@ -1,4 +1,4 @@
-#include "nftcontract.hpp"
+#include "../include/nft_contract.hpp"
 
 void nftcontract::createcol(name issuer, uint64_t collection_id, std::string description, std::string metadata_schema, std::string industry) {
     require_auth(issuer);

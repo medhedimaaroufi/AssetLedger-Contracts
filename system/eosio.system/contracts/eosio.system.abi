@@ -71,6 +71,10 @@
                 {
                     "name": "initial_phase_rewards",
                     "type": "asset"
+                },
+                {
+                    "name": "treasury",
+                    "type": "asset"
                 }
             ]
         },
@@ -107,6 +111,10 @@
                 },
                 {
                     "name": "uptime_hours",
+                    "type": "uint64"
+                },
+                {
+                    "name": "verification_count",
                     "type": "uint64"
                 },
                 {
@@ -192,6 +200,20 @@
             ]
         },
         {
+            "name": "verifyblock",
+            "base": "",
+            "fields": [
+                {
+                    "name": "node",
+                    "type": "name"
+                },
+                {
+                    "name": "block_hash",
+                    "type": "checksum256"
+                }
+            ]
+        },
+        {
             "name": "voteproducer",
             "base": "",
             "fields": [
@@ -271,6 +293,11 @@
         {
             "name": "reportactive",
             "type": "reportactive",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "verifyblock",
+            "type": "verifyblock",
             "ricardian_contract": ""
         },
         {
