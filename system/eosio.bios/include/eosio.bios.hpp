@@ -1,9 +1,11 @@
+// eosio.bios.hpp
+// Version: 1.1 (Updated for AssetLedger whitepaper requirements, May 2025)
+
 #include <eosio/eosio.hpp>
 #include <eosio/system.hpp>
-#include <eosio/crypto.hpp>
-#include <eosio/serialize.hpp>
 
 using namespace eosio;
+using namespace std; // For std::vector in setprods
 
 struct producer_key {
     name producer_name;
@@ -20,7 +22,7 @@ public:
     [[eosio::action]]
     void setpriv(name account, uint8_t is_priv);
 
-    // Action to set the producer schedule
+    // Action to set the producer schedule (up to 20 producers as per whitepaper)
     [[eosio::action]]
     void setprods(const std::vector<producer_key>& schedule);
 

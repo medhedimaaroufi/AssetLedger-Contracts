@@ -1,4 +1,7 @@
-#include "../include/eosio.system.hpp"
+// eosio.system.cpp
+// Version: 1.2 (Updated for AssetLedger whitepaper requirements, May 2025)
+
+#include "eosio.system.hpp"
 
 void system_contract::init(uint64_t version, symbol core) {
     require_auth(get_self());
@@ -6,10 +9,14 @@ void system_contract::init(uint64_t version, symbol core) {
     global_table global(get_self(), get_self().value);
     check(global.begin() == global.end(), "System already initialized");
 
+    check(core == symbol("AXT", 4), "Core symbol must be AXT with 4 decimal places");
+
     global.emplace(get_self(), [&](auto& g) {
         g.version = version;
         g.core_symbol = core;
-        g.last_schedule_update = current_time_point().sec_since_epoch();
+        g.chain_start_time = current_time_point().sec_since_epoch();
+        g.initial_phase = true;
+        g.last_schedule_update = g.chain_start_time;
     });
 }
 
@@ -29,16 +36,37 @@ void system_contract::regproducer(name producer, public_key producer_key) {
             p.is_active = true;
         });
     }
+
+    // Register as a node for initial phase distribution
+    node_table nodes(get_self(), get_self().value);
+    auto node_itr = nodes.find(producer.value);
+    if (node_itr == nodes.end()) {
+        nodes.emplace(producer, [&](auto& n) {
+            n.node = producer;
+            n.node_type = "BP";
+            n.is_active = true;
+        });
+    } else {
+        nodes.modify(node_itr, same_payer, [&](auto& n) {
+            n.node_type = "BP";
+            n.is_active = true;
+        });
+    }
 }
 
-void system_contract::voteproducer(name voter, std::vector<name> producers) {
+void system_contract::voteproducer(name voter, vector<name> producers) {
     require_auth(voter);
-    check(producers.size() <= 30, "Cannot vote for more than 30 producers");
+    check(producers.size() <= 20, "Cannot vote for more than 20 producers as per whitepaper");
 
     voter_table voters(get_self(), get_self().value);
     auto voter_itr = voters.find(voter.value);
     check(voter_itr != voters.end(), "Voter not found; must delegate bandwidth first");
     check(voter_itr->staked.amount > 0, "No staked AXT for voting");
+
+    global_table global(get_self(), get_self().value);
+    auto g = global.begin();
+    check(g != global.end(), "Global state not initialized");
+    check(!g->initial_phase, "Voting is disabled during the initial 10-minute phase");
 
     // Remove old votes
     producer_table prod_table(get_self(), get_self().value);
@@ -47,6 +75,7 @@ void system_contract::voteproducer(name voter, std::vector<name> producers) {
         if (prod_itr != prod_table.end()) {
             prod_table.modify(prod_itr, same_payer, [&](auto& p) {
                 p.total_votes -= voter_itr->staked.amount / 10000.0; // AXT has 4 decimals
+                if (p.total_votes < 0) p.total_votes = 0; // Prevent negative votes
             });
         }
     }
@@ -54,7 +83,7 @@ void system_contract::voteproducer(name voter, std::vector<name> producers) {
     // Add new votes
     for (const auto& prod : producers) {
         auto prod_itr = prod_table.find(prod.value);
-        check(prod_itr != prod_table.end(), "Producer not registered");
+        check(prod_itr != prod_table.end(), "Producer not registered: " + prod.to_string());
         prod_table.modify(prod_itr, same_payer, [&](auto& p) {
             p.total_votes += voter_itr->staked.amount / 10000.0;
         });
@@ -72,7 +101,7 @@ void system_contract::voteproducer(name voter, std::vector<name> producers) {
 
 void system_contract::listprods() {
     producer_table producers(get_self(), get_self().value);
-    std::vector<producer_info> result;
+    vector<producer_info> result;
     for (auto itr = producers.begin(); itr != producers.end(); ++itr) {
         if (itr->is_active) {
             result.push_back(*itr);
@@ -80,7 +109,7 @@ void system_contract::listprods() {
     }
 
     // Sort by total_votes (descending)
-    std::sort(result.begin(), result.end(), [](const auto& a, const auto& b) {
+    sort(result.begin(), result.end(), [](const auto& a, const auto& b) {
         return a.total_votes > b.total_votes;
     });
 
@@ -96,15 +125,15 @@ void system_contract::claimrewards(name producer) {
 
     producer_table producers(get_self(), get_self().value);
     auto prod_itr = producers.find(producer.value);
-    check(prod_itr != producers.end(), "Producer not found");
-    check(prod_itr->pending_rewards.amount > 0, "No rewards to claim");
+    check(prod_itr != producers.end(), "Producer not found: " + producer.to_string());
+    check(prod_itr->pending_rewards.amount > 0, "No rewards to claim for " + producer.to_string());
 
     // Issue rewards
     action(
         permission_level{get_self(), "active"_n},
         "eosio.token"_n,
         "issue"_n,
-        std::make_tuple(producer, prod_itr->pending_rewards, std::string("Block production reward"))
+        make_tuple(producer, prod_itr->pending_rewards, string("Block production reward"))
     ).send();
 
     // Clear pending rewards
@@ -119,19 +148,19 @@ void system_contract::claimrewards(name producer) {
 
 void system_contract::delegatebw(name from, name receiver, asset stake_net_quantity, asset stake_cpu_quantity) {
     require_auth(from);
-    check(stake_net_quantity.symbol == symbol("AXT", 4), "Invalid symbol for stake_net");
-    check(stake_cpu_quantity.symbol == symbol("AXT", 4), "Invalid symbol for stake_cpu");
+    check(stake_net_quantity.symbol == symbol("AXT", 4), "Invalid symbol for stake_net: must be AXT");
+    check(stake_cpu_quantity.symbol == symbol("AXT", 4), "Invalid symbol for stake_cpu: must be AXT");
     check(stake_net_quantity.amount >= 0 && stake_cpu_quantity.amount >= 0, "Stake quantities must be non-negative");
 
     asset total_stake = stake_net_quantity + stake_cpu_quantity;
     check(total_stake.amount > 0, "Must stake a positive amount");
 
-    // Transfer AXT to eosio for staking
+    // Transfer AXT to eosio.system for staking
     action(
         permission_level{from, "active"_n},
         "eosio.token"_n,
         "transfer"_n,
-        std::make_tuple(from, get_self(), total_stake, std::string("Stake for bandwidth"))
+        make_tuple(from, get_self(), total_stake, string("Stake for bandwidth"))
     ).send();
 
     voter_table voters(get_self(), get_self().value);
@@ -148,7 +177,71 @@ void system_contract::delegatebw(name from, name receiver, asset stake_net_quant
     }
 }
 
+void system_contract::regnode(name node, string node_type) {
+    require_auth(node);
+    check(node_type == "API" || node_type == "Seed" || node_type == "Full" || node_type == "Validator",
+          "Invalid node type: must be API, Seed, Full, or Validator");
+
+    node_table nodes(get_self(), get_self().value);
+    auto node_itr = nodes.find(node.value);
+    if (node_itr == nodes.end()) {
+        nodes.emplace(node, [&](auto& n) {
+            n.node = node;
+            n.node_type = node_type;
+            n.is_active = true;
+        });
+    } else {
+        nodes.modify(node_itr, same_payer, [&](auto& n) {
+            n.node_type = node_type;
+            n.is_active = true;
+        });
+    }
+}
+
+void system_contract::reportactive(name node, uint64_t uptime_hours) {
+    require_auth(node);
+    check(uptime_hours > 0, "Uptime must be positive");
+
+    node_table nodes(get_self(), get_self().value);
+    auto node_itr = nodes.find(node.value);
+    check(node_itr != nodes.end(), "Node not registered: " + node.to_string());
+    check(node_itr->is_active, "Node is not active: " + node.to_string());
+
+    // Update uptime and calculate rewards (10 AXT/hour)
+    asset reward = asset(uptime_hours * 10 * 10000, symbol("AXT", 4)); // 10 AXT/hour
+    nodes.modify(node_itr, same_payer, [&](auto& n) {
+        n.uptime_hours += uptime_hours;
+        n.pending_node_rewards += reward;
+    });
+
+    // Distribute node rewards daily (simplified: distribute on report for now)
+    if (node_itr->pending_node_rewards.amount > 0) {
+        action(
+            permission_level{get_self(), "active"_n},
+            "eosio.token"_n,
+            "issue"_n,
+            make_tuple(node, node_itr->pending_node_rewards, string("Node activity reward"))
+        ).send();
+
+        nodes.modify(node_itr, same_payer, [&](auto& n) {
+            n.pending_node_rewards = asset(0, symbol("AXT", 4));
+        });
+    }
+}
+
 void system_contract::onblock(block_timestamp timestamp, name producer) {
+    global_table global(get_self(), get_self().value);
+    auto g = global.begin();
+    check(g != global.end(), "Global state not initialized");
+
+    uint64_t now = current_time_point().sec_since_epoch();
+    if (g->initial_phase && (now - g->chain_start_time >= 600)) { // 10 minutes
+        distribute_initial_rewards();
+        global.modify(g, same_payer, [&](auto& s) {
+            s.initial_phase = false;
+        });
+    }
+
     producer_table producers(get_self(), get_self().value);
     auto prod_itr = producers.find(producer.value);
     if (prod_itr == producers.end()) return;
@@ -169,7 +262,7 @@ void system_contract::schedule_producers() {
     if (now - g->last_schedule_update < 6 * 3600) return; // 6 hours
 
     producer_table producers(get_self(), get_self().value);
-    std::vector<producer_info> top_producers;
+    vector<producer_info> top_producers;
     for (auto itr = producers.begin(); itr != producers.end(); ++itr) {
         if (itr->is_active) {
             top_producers.push_back(*itr);
@@ -179,7 +272,7 @@ void system_contract::schedule_producers() {
     if (top_producers.empty()) return;
 
     // Sort by total_votes (descending)
-    std::sort(top_producers.begin(), top_producers.end(), [](const auto& a, const auto& b) {
+    sort(top_producers.begin(), top_producers.end(), [](const auto& a, const auto& b) {
         return a.total_votes > b.total_votes;
     });
 
@@ -191,17 +284,44 @@ void system_contract::schedule_producers() {
         s.last_schedule_update = now;
     });
 
-    // Notify chain of new schedule
-    print("New producer schedule: ", top_producers.size(), " producers\n");
+    // Notify chain of new schedule using setprods (similar to eosio.bios)
+    vector<struct producer_key> schedule;
+    for (const auto& prod : top_producers) {
+        producer_key p;
+        p.producer_name = prod.owner;
+        p.block_signing_key = prod.producer_key;
+        schedule.push_back(p);
+    }
+    action(
+        permission_level{get_self(), "active"_n},
+        "eosio"_n,
+        "setprods"_n,
+        make_tuple(schedule)
+    ).send();
+
+    print("New producer schedule applied: ", top_producers.size(), " producers\n");
 }
 
 void system_contract::distribute_rewards(name producer) {
     producer_table producers(get_self(), get_self().value);
     auto prod_itr = producers.find(producer.value);
-    check(prod_itr != producers.end(), "Producer not found");
+    check(prod_itr != producers.end(), "Producer not found: " + producer.to_string());
+
+    global_table global(get_self(), get_self().value);
+    auto g = global.begin();
+    check(g != global.end(), "Global state not initialized");
+
+    if (g->initial_phase) {
+        // Accumulate rewards during initial phase
+        asset block_reward = asset(1 * 10000, symbol("AXT", 4)); // 1 AXT/block
+        global.modify(g, same_payer, [&](auto& s) {
+            s.initial_phase_rewards += block_reward;
+        });
+        return;
+    }
 
     // Check if producer is in top 20
-    std::vector<producer_info> top_producers;
+    vector<producer_info> top_producers;
     for (auto itr = producers.begin(); itr != producers.end(); ++itr) {
         if (itr->is_active) {
             top_producers.push_back(*itr);
@@ -209,7 +329,7 @@ void system_contract::distribute_rewards(name producer) {
     }
 
     // Sort by total_votes (descending)
-    std::sort(top_producers.begin(), top_producers.end(), [](const auto& a, const auto& b) {
+    sort(top_producers.begin(), top_producers.end(), [](const auto& a, const auto& b) {
         return a.total_votes > b.total_votes;
     });
 
@@ -225,21 +345,40 @@ void system_contract::distribute_rewards(name producer) {
     }
     if (!is_top_producer) return;
 
-    // BP reward: 30 AXT/block
-    asset bp_reward = asset(30 * 10000, symbol("AXT", 4)); // 30 AXT
+    // Calculate total staked AXT and votes for reward split
+    voter_table voters(get_self(), get_self().value);
+    double total_staked_axt = 0;
+    double total_votes_for_bps = 0;
+    for (const auto& voter : voters) {
+        total_staked_axt += voter.staked.amount / 10000.0;
+    }
+    for (const auto& p : top_producers) {
+        total_votes_for_bps += p.total_votes;
+    }
+
+    // Total reward per block: 1 AXT
+    asset total_reward = asset(1 * 10000, symbol("AXT", 4)); // 1 AXT/block
+    double total_stake_votes = total_staked_axt + total_votes_for_bps;
+    if (total_stake_votes == 0) return; // Avoid division by zero
+
+    // BP reward
+    double bp_pool_share = total_votes_for_bps / total_stake_votes;
+    asset bp_pool = asset(total_reward.amount * bp_pool_share, symbol("AXT", 4));
+    double producer_votes = prod_itr->total_votes;
+    asset bp_reward = asset(bp_pool.amount * (producer_votes / total_votes_for_bps), symbol("AXT", 4));
     producers.modify(prod_itr, same_payer, [&](auto& p) {
         p.pending_rewards += bp_reward;
     });
 
-    // Voter reward: 15 AXT/block, distributed proportionally
-    voter_table voters(get_self(), get_self().value);
-    double total_votes_for_producer = prod_itr->total_votes;
-    if (total_votes_for_producer > 0) {
+    // Voter reward
+    double voter_pool_share = total_staked_axt / total_stake_votes;
+    asset voter_pool = asset(total_reward.amount * voter_pool_share, symbol("AXT", 4));
+    if (total_votes_for_bps > 0) {
         for (auto& voter : voters) {
             for (const auto& voted_producer : voter.producers) {
                 if (voted_producer == producer) {
-                    double voter_share = (voter.staked.amount / 10000.0) / total_votes_for_producer;
-                    asset voter_reward = asset(15 * 10000 * voter_share, symbol("AXT", 4)); // 15 AXT total
+                    double voter_share = (voter.staked.amount / 10000.0) / total_staked_axt;
+                    asset voter_reward = asset(voter_pool.amount * voter_share, symbol("AXT", 4));
                     voters.modify(voter, same_payer, [&](auto& v) {
                         v.pending_voter_rewards += voter_reward;
                     });
@@ -250,6 +389,39 @@ void system_contract::distribute_rewards(name producer) {
     }
 }
 
+void system_contract::distribute_initial_rewards() {
+    global_table global(get_self(), get_self().value);
+    auto g = global.begin();
+    check(g != global.end(), "Global state not initialized");
+    check(g->initial_phase, "Initial phase already ended");
+
+    node_table nodes(get_self(), get_self().value);
+    vector<name> active_nodes;
+    for (auto itr = nodes.begin(); itr != nodes.end(); ++itr) {
+        if (itr->is_active) {
+            active_nodes.push_back(itr->node);
+        }
+    }
+
+    if (active_nodes.empty()) return;
+
+    // Distribute 1200 AXT equally among all active nodes
+    asset total_initial_rewards = g->initial_phase_rewards;
+    asset reward_per_node = asset(total_initial_rewards.amount / active_nodes.size(), symbol("AXT", 4));
+    for (const auto& node : active_nodes) {
+        action(
+            permission_level{get_self(), "active"_n},
+            "eosio.token"_n,
+            "issue"_n,
+            make_tuple(node, reward_per_node, string("Initial phase reward"))
+        ).send();
+    }
+
+    global.modify(g, same_payer, [&](auto& s) {
+        s.initial_phase_rewards = asset(0, symbol("AXT", 4));
+    });
+}
+
 void system_contract::update_voter_rewards() {
     voter_table voters(get_self(), get_self().value);
     for (auto& voter : voters) {
@@ -258,7 +430,7 @@ void system_contract::update_voter_rewards() {
                 permission_level{get_self(), "active"_n},
                 "eosio.token"_n,
                 "issue"_n,
-                std::make_tuple(voter.owner, voter.pending_voter_rewards, std::string("Voter reward"))
+                make_tuple(voter.owner, voter.pending_voter_rewards, string("Voter reward"))
             ).send();
 
             voters.modify(voter, same_payer, [&](auto& v) {

@@ -1,122 +1,117 @@
-#include <eosio/eosio.hpp>
-#include <eosio/asset.hpp>
+// eosio.token.cpp
+// Version: 1.1 (Updated for AssetLedger whitepaper requirements, May 2025)
 
-using namespace eosio;
+#include "eosio.token.hpp"
 
-class [[eosio::contract("eosio.token")]] token : public contract {
-public:
-  using contract::contract;
-
-  [[eosio::action]]
-  void create(name issuer, asset maximum_supply) {
+void token::create(name issuer, asset maximum_supply) {
+    // Require authorization from the contract itself (eosio.token)
     require_auth(get_self());
 
+    // Validate the issuer account exists
+    check(is_account(issuer), "Issuer account does not exist: " + issuer.to_string());
+
     auto sym = maximum_supply.symbol;
-    check(sym.is_valid(), "invalid symbol name");
-    check(maximum_supply.is_valid(), "invalid supply");
-    check(maximum_supply.amount > 0, "max-supply must be positive");
+    check(sym.is_valid(), "Invalid symbol name: " + sym.code().to_string());
+
+    // Enforce AXT symbol and precision as per AssetLedger whitepaper
+    check(sym.code() == symbol_code("AXT"), "Symbol must be AXT");
+    check(sym.precision() == 4, "AXT must have 4 decimal places");
+
+    check(maximum_supply.is_valid(), "Invalid supply");
+    check(maximum_supply.amount > 0, "Max supply must be positive");
 
     stats statstable(get_self(), sym.code().raw());
     auto existing = statstable.find(sym.code().raw());
-    check(existing == statstable.end(), "token with symbol already exists");
+    check(existing == statstable.end(), "Token with symbol " + sym.code().to_string() + " already exists");
 
     statstable.emplace(get_self(), [&](auto& s) {
-      s.supply.symbol = maximum_supply.symbol;
-      s.max_supply = maximum_supply;
-      s.issuer = issuer;
+        s.supply = asset(0, maximum_supply.symbol); // Initial supply is 0 as per whitepaper
+        s.max_supply = maximum_supply;
+        s.issuer = issuer;
     });
-  }
+}
 
-  [[eosio::action]]
-  void issue(name to, asset quantity, std::string memo) {
+void token::issue(name to, asset quantity, std::string memo) {
     auto sym = quantity.symbol;
-    check(sym.is_valid(), "invalid symbol name");
-    check(memo.size() <= 256, "memo has more than 256 bytes");
+    check(sym.is_valid(), "Invalid symbol name: " + sym.code().to_string());
+    check(memo.size() <= 256, "Memo exceeds 256 bytes");
 
     stats statstable(get_self(), sym.code().raw());
     auto existing = statstable.find(sym.code().raw());
-    check(existing != statstable.end(), "token with symbol does not exist, create token before issue");
+    check(existing != statstable.end(), "Token with symbol " + sym.code().to_string() + " does not exist, create token before issue");
     const auto& st = *existing;
-    check(to != name(), "must issue to an account");
+
+    // Validate the recipient account exists
+    check(is_account(to), "Recipient account does not exist: " + to.to_string());
 
     require_auth(st.issuer);
-    check(quantity.is_valid(), "invalid quantity");
-    check(quantity.amount > 0, "must issue positive quantity");
+    check(quantity.is_valid(), "Invalid quantity");
+    check(quantity.amount > 0, "Must issue positive quantity");
 
-    check(quantity.symbol == st.supply.symbol, "symbol precision mismatch");
-    check(quantity.amount <= st.max_supply.amount - st.supply.amount, "quantity exceeds available supply");
+    check(quantity.symbol == st.supply.symbol, "Symbol precision mismatch");
+    check(quantity.amount <= st.max_supply.amount - st.supply.amount, "Quantity exceeds available supply");
 
     statstable.modify(st, same_payer, [&](auto& s) {
-      s.supply += quantity;
+        s.supply += quantity;
     });
 
     add_balance(st.issuer, quantity, st.issuer);
     if (to != st.issuer) {
-      transfer(st.issuer, to, quantity, memo);
+        // Perform the transfer; note that this may fail if the recipient lacks sufficient RAM
+        transfer(st.issuer, to, quantity, memo);
     }
-  }
+}
 
-  [[eosio::action]]
-  void transfer(name from, name to, asset quantity, std::string memo) {
-    check(from != to, "cannot transfer to self");
+void token::transfer(name from, name to, asset quantity, std::string memo) {
+    check(from != to, "Cannot transfer to self");
     require_auth(from);
-    check(to != name(), "to account does not exist");
+    check(is_account(to), "Recipient account does not exist: " + to.to_string());
+
     auto sym = quantity.symbol;
     stats statstable(get_self(), sym.code().raw());
-    const auto& st = statstable.get(sym.code().raw());
+    const auto& st = statstable.get(sym.code().raw(), "Token stats not found for symbol: " + sym.code().to_string());
 
     require_recipient(from);
     require_recipient(to);
 
-    check(quantity.is_valid(), "invalid quantity");
-    check(quantity.amount > 0, "must transfer positive quantity");
-    check(quantity.symbol == st.supply.symbol, "symbol precision mismatch");
-    check(memo.size() <= 256, "memo has more than 256 bytes");
+    check(quantity.is_valid(), "Invalid quantity");
+    check(quantity.amount > 0, "Must transfer positive quantity");
+    check(quantity.symbol == st.supply.symbol, "Symbol precision mismatch");
+    check(memo.size() <= 256, "Memo exceeds 256 bytes");
 
     auto payer = has_auth(to) ? to : from;
 
     sub_balance(from, quantity);
     add_balance(to, quantity, payer);
-  }
 
-private:
-  struct [[eosio::table]] account {
-    asset balance;
+    // Note: Staking/freezing logic for voting (1 AXT = 1 vote) may be implemented in eosio.system
+}
 
-    uint64_t primary_key() const { return balance.symbol.code().raw(); }
-  };
-  using accounts = multi_index<"accounts"_n, account>;
-
-  struct [[eosio::table]] currency_stats {
-    asset supply;
-    asset max_supply;
-    name issuer;
-
-    uint64_t primary_key() const { return supply.symbol.code().raw(); }
-  };
-  using stats = multi_index<"stats"_n, currency_stats>;
-
-  void add_balance(name owner, asset value, name ram_payer) {
+void token::add_balance(name owner, asset value, name ram_payer) {
     accounts acnts(get_self(), owner.value);
     auto it = acnts.find(value.symbol.code().raw());
     if (it == acnts.end()) {
-      acnts.emplace(ram_payer, [&](auto& a) {
-        a.balance = value;
-      });
+        acnts.emplace(ram_payer, [&](auto& a) {
+            a.balance = value;
+        });
     } else {
-      acnts.modify(it, ram_payer, [&](auto& a) {
-        a.balance += value;
-      });
+        acnts.modify(it, ram_payer, [&](auto& a) {
+            a.balance += value;
+        });
     }
-  }
+}
 
-  void sub_balance(name owner, asset value) {
+void token::sub_balance(name owner, asset value) {
     accounts acnts(get_self(), owner.value);
-    const auto& from = acnts.get(value.symbol.code().raw(), "no balance object found");
-    check(from.balance.amount >= value.amount, "overdrawn balance");
+    const auto& from = acnts.get(value.symbol.code().raw(), "No balance object found for " + owner.to_string());
+    check(from.balance.amount >= value.amount, "Overdrawn balance for " + owner.to_string());
 
-    acnts.modify(from, owner, [&](auto& a) {
-      a.balance -= value;
-    });
-  }
-};
+    if (from.balance.amount == value.amount) {
+        // Erase the account if the balance becomes zero to prevent table bloat
+        acnts.erase(from);
+    } else {
+        acnts.modify(from, owner, [&](auto& a) {
+            a.balance -= value;
+        });
+    }
+}
