@@ -1,5 +1,5 @@
 // eosio.system.hpp
-// Version: 1.1 (Updated for AssetLedger whitepaper requirements, May 2025)
+// Version: 1.3 (Updated for AssetLedger whitepaper requirements, May 2025)
 
 #pragma once
 
@@ -7,17 +7,9 @@
 #include <eosio/asset.hpp>
 #include <eosio/system.hpp>
 #include <eosio/time.hpp>
-#include <eosio/crypto.hpp>
 
 using namespace eosio;
 using namespace std; // For std::vector, std::sort
-
-struct producer_key {
-    name producer_name;
-    public_key block_signing_key;
-
-    EOSLIB_SERIALIZE(producer_key, (producer_name)(block_signing_key))
-};
 
 class [[eosio::contract("eosio.system")]] system_contract : public contract {
 public:
@@ -32,6 +24,7 @@ public:
     [[eosio::action]] void delegatebw(name from, name receiver, asset stake_net_quantity, asset stake_cpu_quantity);
     [[eosio::action]] void regnode(name node, string node_type); // Register API, Seed, Full, Validator nodes
     [[eosio::action]] void reportactive(name node, uint64_t uptime_hours); // Report uptime for active node rewards
+    [[eosio::action]] void distrnodes(); // Distribute node rewards daily
     [[eosio::on_notify("eosio::onblock")]] void onblock(block_timestamp timestamp, name producer);
 
 private:
@@ -82,11 +75,12 @@ private:
         uint64_t chain_start_time = 0; // Time of chain initialization
         bool initial_phase = true; // First 10 minutes
         uint64_t last_schedule_update = 0;
+        uint64_t last_node_reward_time = 0; // Last time node rewards were distributed
         asset initial_phase_rewards = asset(0, symbol("AXT", 4)); // Accumulate rewards in first 10 minutes
 
         uint64_t primary_key() const { return 0; }
 
-        EOSLIB_SERIALIZE(global_state, (version)(core_symbol)(chain_start_time)(initial_phase)(last_schedule_update)(initial_phase_rewards))
+        EOSLIB_SERIALIZE(global_state, (version)(core_symbol)(chain_start_time)(initial_phase)(last_schedule_update)(last_node_reward_time)(initial_phase_rewards))
     };
     using global_table = multi_index<"global"_n, global_state>;
 

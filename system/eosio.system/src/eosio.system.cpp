@@ -1,5 +1,5 @@
 // eosio.system.cpp
-// Version: 1.1 (Updated for AssetLedger whitepaper requirements, May 2025)
+// Version: 1.3 (Updated for AssetLedger whitepaper requirements, May 2025)
 
 #include "eosio.system.hpp"
 
@@ -17,6 +17,7 @@ void system_contract::init(uint64_t version, symbol core) {
         g.chain_start_time = current_time_point().sec_since_epoch();
         g.initial_phase = true;
         g.last_schedule_update = g.chain_start_time;
+        g.last_node_reward_time = g.chain_start_time;
     });
 }
 
@@ -90,10 +91,23 @@ void system_contract::voteproducer(name voter, vector<name> producers) {
     }
 
     // Update voter
+    uint64_t now = current_time_point().sec_since_epoch();
     voters.modify(voter_itr, voter, [&](auto& v) {
         v.producers = producers;
-        v.last_vote_time = current_time_point().sec_since_epoch();
+        v.last_vote_time = now;
     });
+
+    // Notify nodegovernance to track Validator voting participation
+    node_table nodes(get_self(), get_self().value);
+    auto node_itr = nodes.find(voter.value);
+    if (node_itr != nodes.end() && node_itr->node_type == "Validator") {
+        action(
+            permission_level{get_self(), "active"_n},
+            "nodegovernance"_n,
+            "checkvoting"_n,
+            std::make_tuple(voter, now)
+        ).send();
+    }
 
     // Schedule producers if 6 hours have passed
     schedule_producers();
@@ -133,7 +147,7 @@ void system_contract::claimrewards(name producer) {
         permission_level{get_self(), "active"_n},
         "eosio.token"_n,
         "issue"_n,
-        make_tuple(producer, prod_itr->pending_rewards, string("Block production reward"))
+        std::make_tuple(producer, prod_itr->pending_rewards, std::string("Block production reward"))
     ).send();
 
     // Clear pending rewards
@@ -160,7 +174,7 @@ void system_contract::delegatebw(name from, name receiver, asset stake_net_quant
         permission_level{from, "active"_n},
         "eosio.token"_n,
         "transfer"_n,
-        make_tuple(from, get_self(), total_stake, string("Stake for bandwidth"))
+        std::make_tuple(from, get_self(), total_stake, std::string("Stake for bandwidth"))
     ).send();
 
     voter_table voters(get_self(), get_self().value);
@@ -213,20 +227,11 @@ void system_contract::reportactive(name node, uint64_t uptime_hours) {
         n.uptime_hours += uptime_hours;
         n.pending_node_rewards += reward;
     });
+}
 
-    // Distribute node rewards daily (simplified: distribute on report for now)
-    if (node_itr->pending_node_rewards.amount > 0) {
-        action(
-            permission_level{get_self(), "active"_n},
-            "eosio.token"_n,
-            "issue"_n,
-            make_tuple(node, node_itr->pending_node_rewards, string("Node activity reward"))
-        ).send();
-
-        nodes.modify(node_itr, same_payer, [&](auto& n) {
-            n.pending_node_rewards = asset(0, symbol("AXT", 4));
-        });
-    }
+void system_contract::distrnodes() {
+    require_auth(get_self());
+    distribute_node_rewards();
 }
 
 void system_contract::onblock(block_timestamp timestamp, name producer) {
@@ -251,9 +256,24 @@ void system_contract::onblock(block_timestamp timestamp, name producer) {
 
     // Schedule producers if 6 hours have passed
     schedule_producers();
+
+    // Distribute node rewards if 24 hours have passed
+    if (now - g->last_node_reward_time >= 24 * 3600) { // 24 hours
+        distribute_node_rewards();
+        global.modify(g, same_payer, [&](auto& s) {
+            s.last_node_reward_time = now;
+        });
+    }
 }
 
 void system_contract::schedule_producers() {
+    struct producer_key {
+        name producer_name;
+        public_key block_signing_key;
+
+        EOSLIB_SERIALIZE(producer_key, (producer_name)(block_signing_key))
+    };
+
     global_table global(get_self(), get_self().value);
     auto g = global.begin();
     check(g != global.end(), "Global state not initialized");
@@ -284,8 +304,8 @@ void system_contract::schedule_producers() {
         s.last_schedule_update = now;
     });
 
-    // Notify chain of new schedule using setprods (similar to eosio.bios)
-    vector<struct producer_key> schedule;
+    // Notify chain of new schedule using setprods
+    vector<producer_key> schedule;
     for (const auto& prod : top_producers) {
         producer_key p;
         p.producer_name = prod.owner;
@@ -296,7 +316,7 @@ void system_contract::schedule_producers() {
         permission_level{get_self(), "active"_n},
         "eosio"_n,
         "setprods"_n,
-        make_tuple(schedule)
+        std::make_tuple(schedule)
     ).send();
 
     print("New producer schedule applied: ", top_producers.size(), " producers\n");
@@ -413,7 +433,7 @@ void system_contract::distribute_initial_rewards() {
             permission_level{get_self(), "active"_n},
             "eosio.token"_n,
             "issue"_n,
-            make_tuple(node, reward_per_node, string("Initial phase reward"))
+            std::make_tuple(node, reward_per_node, std::string("Initial phase reward"))
         ).send();
     }
 
@@ -430,12 +450,33 @@ void system_contract::update_voter_rewards() {
                 permission_level{get_self(), "active"_n},
                 "eosio.token"_n,
                 "issue"_n,
-                make_tuple(voter.owner, voter.pending_voter_rewards, string("Voter reward"))
+                std::make_tuple(voter.owner, voter.pending_voter_rewards, std::string("Voter reward"))
             ).send();
 
             voters.modify(voter, same_payer, [&](auto& v) {
                 v.pending_voter_rewards = asset(0, symbol("AXT", 4));
             });
+        }
+    }
+}
+
+void system_contract::distribute_node_rewards() {
+    node_table nodes(get_self(), get_self().value);
+    for (auto itr = nodes.begin(); itr != nodes.end(); ++itr) {
+        if (itr->is_active && itr->pending_node_rewards.amount > 0) {
+            action(
+                permission_level{get_self(), "active"_n},
+                "eosio.token"_n,
+                "issue"_n,
+                std::make_tuple(itr->node, itr->pending_node_rewards, std::string("Node activity reward"))
+            ).send();
+
+            nodes.modify(itr, same_payer, [&](auto& n) {
+                n.pending_node_rewards = asset(0, symbol("AXT", 4));
+            });
+
+            // Notify the node
+            require_recipient(itr->node);
         }
     }
 }
