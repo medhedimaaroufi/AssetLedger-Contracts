@@ -1,6 +1,3 @@
-// eosio.token.cpp
-// Version: 1.1 (Updated for AssetLedger whitepaper requirements, May 2025)
-
 #include "eosio.token.hpp"
 
 void token::create(name issuer, asset maximum_supply) {
@@ -16,6 +13,7 @@ void token::create(name issuer, asset maximum_supply) {
 
     check(maximum_supply.is_valid(), "Invalid supply");
     check(maximum_supply.amount > 0, "Max supply must be positive");
+    check(maximum_supply.amount <= 10000000000000000, "Max supply capped at 1 trillion AXT"); // 1T AXT
 
     stats statstable(get_self(), sym.code().raw());
     auto existing = statstable.find(sym.code().raw());
@@ -26,6 +24,9 @@ void token::create(name issuer, asset maximum_supply) {
         s.max_supply = maximum_supply;
         s.issuer = issuer;
     });
+
+    // Note: Zero-cost transactions are achieved via sponsor-funded resources (CPU, Net) for new accounts,
+    // with optional subsidies configurable off-chain.
 }
 
 void token::issue(name to, asset quantity, std::string memo) {
@@ -35,7 +36,7 @@ void token::issue(name to, asset quantity, std::string memo) {
 
     stats statstable(get_self(), sym.code().raw());
     auto existing = statstable.find(sym.code().raw());
-    check(existing != statstable.end(), "Token with symbol does not exist, create token before issue");
+    check(existing != statstable.end(), "Token with symbol does not exist");
     const auto& st = *existing;
 
     check(is_account(to), "Recipient account does not exist");
@@ -64,7 +65,6 @@ void token::transfer(name from, name to, asset quantity, std::string memo) {
 
     auto sym = quantity.symbol;
     stats statstable(get_self(), sym.code().raw());
-    // Use a static const char* error message
     const auto& st = statstable.get(sym.code().raw(), "Token stats not found");
 
     require_recipient(from);
@@ -97,7 +97,6 @@ void token::add_balance(name owner, asset value, name ram_payer) {
 
 void token::sub_balance(name owner, asset value) {
     accounts acnts(get_self(), owner.value);
-    // Use a static const char* error message
     const auto& from = acnts.get(value.symbol.code().raw(), "No balance object found");
     check(from.balance.amount >= value.amount, "Overdrawn balance");
 

@@ -40,6 +40,14 @@
                 {
                     "name": "description",
                     "type": "string"
+                },
+                {
+                    "name": "metadata_schema",
+                    "type": "string"
+                },
+                {
+                    "name": "industry",
+                    "type": "string"
                 }
             ]
         },
@@ -79,6 +87,14 @@
                 },
                 {
                     "name": "description",
+                    "type": "string"
+                },
+                {
+                    "name": "metadata_schema",
+                    "type": "string"
+                },
+                {
+                    "name": "industry",
                     "type": "string"
                 }
             ]
