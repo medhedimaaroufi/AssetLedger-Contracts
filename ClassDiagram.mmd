@@ -1,0 +1,193 @@
+classDiagram
+
+    %% Define the nodegovernance contract
+    class nodegovernance {
+        +checkvoting(user: name, current_time: uint64_t)
+        +canbevalid(user: name)
+        +canbeprod(user: name)
+        +claimrewards(user: name)
+        +sponsor(sponsor: name, new_account: name, resource_cost: asset)
+        +trackdaily(node: name, uptime_hours: uint64_t)
+    }
+
+    class voting_entry {
+        +user: name
+        +timestamp: uint64_t
+        +primary_key(): uint64_t
+    }
+
+    class node_entry {
+        +user: name
+        +node_type: string
+        +days_active: uint64_t
+        +voting_sessions: uint64_t
+        +is_candidate: bool
+        +primary_key(): uint64_t
+    }
+
+    class sponsor_entry {
+        +sponsor: name
+        +new_account: name
+        +resource_cost: asset
+        +reward: asset
+        +primary_key(): uint64_t
+        +by_sponsor(): uint64_t
+    }
+
+    class daily_activity {
+        +node: name
+        +date: uint64_t
+        +hours_active: uint64_t
+        +primary_key(): uint64_t
+        +by_daily(): uint64_t
+    }
+
+    nodegovernance --> voting_entry : voting_table
+    nodegovernance --> node_entry : node_table
+    nodegovernance --> sponsor_entry : sponsor_table
+    nodegovernance --> daily_activity : daily_table
+
+    %% Define the nftcontract contract
+    class nftcontract {
+        +createcol(issuer: name, collection_id: uint64_t, description: string, metadata_schema: string, industry: string)
+        +create(issuer: name, collection_id: uint64_t, asset_id: uint64_t, metadata: string)
+        +issue(to: name, collection_id: uint64_t, asset_id: uint64_t, memo: string)
+        +transfer(from: name, to: name, collection_id: uint64_t, asset_id: uint64_t, memo: string)
+    }
+
+    class asset_entry {
+        +asset_id: uint64_t
+        +owner: name
+        +collection_id: uint64_t
+        +metadata: string
+        +primary_key(): uint64_t
+        +by_collection(): uint64_t
+    }
+
+    class collection_entry {
+        +collection_id: uint64_t
+        +issuer: name
+        +description: string
+        +metadata_schema: string
+        +industry: string
+        +primary_key(): uint64_t
+    }
+
+    nftcontract --> asset_entry : asset_table
+    nftcontract --> collection_entry : collection_table
+
+    %% Define the eosio.bios contract
+    class bios {
+        +setpriv(account: name, is_priv: uint8_t)
+        +setprods(schedule: vector~producer_key~)
+    }
+
+    class producer_key {
+        +producer_name: name
+        +block_signing_key: public_key
+    }
+
+    class producer_entry {
+        +producer_name: name
+        +block_signing_key: public_key
+        +primary_key(): uint64_t
+    }
+
+    bios --> producer_entry : producer_table
+
+    %% Define the eosio.system contract
+    class system_contract {
+        +init(version: uint64_t, core: symbol)
+        +regproducer(producer: name, producer_key: public_key)
+        +voteproducer(voter: name, producers: vector~name~)
+        +listprods()
+        +claimrewards(producer: name)
+        +delegatebw(from: name, receiver: name, stake_net_quantity: asset, stake_cpu_quantity: asset)
+        +regnode(node: name, node_type: string)
+        +reportactive(node: name, uptime_hours: uint64_t)
+        +verifyblock(node: name, block_hash: checksum256)
+        +distrnodes()
+        +onblock(timestamp: block_timestamp, producer: name)
+        -schedule_producers()
+        -distribute_rewards(producer: name)
+        -distribute_initial_rewards()
+        -update_voter_rewards()
+        -distribute_node_rewards()
+    }
+
+    class producer_info {
+        +owner: name
+        +total_votes: double
+        +producer_key: public_key
+        +is_active: bool
+        +last_reward_claim: uint64_t
+        +pending_rewards: asset
+        +primary_key(): uint64_t
+    }
+
+    class voter_info {
+        +owner: name
+        +producers: vector~name~
+        +staked: asset
+        +last_vote_time: uint64_t
+        +pending_voter_rewards: asset
+        +primary_key(): uint64_t
+    }
+
+    class node_info {
+        +node: name
+        +node_type: string
+        +uptime_hours: uint64_t
+        +verification_count: uint64_t
+        +pending_node_rewards: asset
+        +is_active: bool
+        +primary_key(): uint64_t
+    }
+
+    class global_state {
+        +version: uint64_t
+        +core_symbol: symbol
+        +chain_start_time: uint64_t
+        +initial_phase: bool
+        +last_schedule_update: uint64_t
+        +last_node_reward_time: uint64_t
+        +initial_phase_rewards: asset
+        +treasury: asset
+        +primary_key(): uint64_t
+    }
+
+    system_contract --> producer_info : producer_table
+    system_contract --> voter_info : voter_table
+    system_contract --> node_info : node_table
+    system_contract --> global_state : global_table
+
+    %% Define the eosio.token contract
+    class token {
+        +create(issuer: name, maximum_supply: asset)
+        +issue(to: name, quantity: asset, memo: string)
+        +transfer(from: name, to: name, quantity: asset, memo: string)
+        -add_balance(owner: name, value: asset, ram_payer: name)
+        -sub_balance(owner: name, value: asset)
+    }
+
+    class account {
+        +balance: asset
+        +primary_key(): uint64_t
+    }
+
+    class currency_stats {
+        +supply: asset
+        +max_supply: asset
+        +issuer: name
+        +primary_key(): uint64_t
+    }
+
+    token --> account : accounts
+    token --> currency_stats : stats
+
+    %% Define relationships between contracts
+    nodegovernance --> token : calls issue, transfer
+    nodegovernance --> system_contract : calls delegatebw
+    system_contract --> nodegovernance : calls checkvoting, trackdaily
+    system_contract --> token : calls issue, transfer
+    bios --> system_contract : calls setprods 
